@@ -1,0 +1,21 @@
+# Supabase プロジェクト設定
+# `supabase link` 後に project_id は自動で書き換わります。
+project_id = "your-project-ref"
+
+# 各 Edge Function は user JWT を必須にしない (anon キーのみで呼び出す社内ツール)。
+# 設定変更は ADMIN_KEY で別途保護している。
+
+[functions.extract]
+verify_jwt = false
+
+[functions.send]
+verify_jwt = false
+
+[functions.settings]
+verify_jwt = false
+
+[functions.records]
+verify_jwt = false
+
+[functions.correction]
+verify_jwt = false

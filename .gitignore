@@ -1,0 +1,13 @@
+.DS_Store
+**/.DS_Store
+node_modules/
+.env
+.env.*
+supabase/.temp/
+supabase/.branches/
+
+# サンプル画像は業務データのためコミットしない
+サンプル画像/
+
+# サンドボックス残骸
+testfile.tmp
