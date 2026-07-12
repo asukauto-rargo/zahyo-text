@@ -105,6 +105,30 @@ textarea {
   border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 14px; color: var(--text);
 }
 
+/* 見比べレイアウト */
+.compare { display: flex; gap: 16px; align-items: flex-start; }
+.imgpane {
+  flex: 1 1 44%; min-width: 0;
+  position: sticky; top: 8px;
+  max-height: calc(100vh - 24px); overflow: auto;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px;
+}
+.datapane { flex: 1 1 56%; min-width: 0; }
+.datapane .card { margin-bottom: 16px; }
+.imgpane-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 14px; }
+.imgpane-head .spacer { flex: 1; }
+.zoomlabel { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.imgwrap { text-align: center; }
+.imgwrap canvas { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; }
+button.mini { padding: 4px 10px; }
+
+@media (max-width: 900px) {
+  .compare { flex-direction: column; }
+  .imgpane { position: static; max-height: none; width: 100%; flex-basis: auto; }
+  .datapane { flex-basis: auto; width: 100%; }
+}
+
 .hidden { display: none !important; }
 code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
 footer { padding: 16px 24px 32px; color: var(--muted); font-size: 12px; }

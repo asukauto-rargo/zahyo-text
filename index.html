@@ -9,10 +9,9 @@
 <body>
   <header>
     <h1>座標テキスト化ツール</h1>
-    <p class="sub">写真 / PDF から X・Y 座標を読み取り、確認してテキストをダウンロードします。</p>
+    <p class="sub">写真 / PDF から X・Y 座標を読み取り、元画像と見比べて確認し、テキストをダウンロードします。</p>
   </header>
 
-  <!-- 設定未完了の警告 -->
   <div id="configWarning" class="banner warn hidden">
     config.js が未設定です。<code>config.example.js</code> を <code>config.js</code> にコピーして値を入れてください。
   </div>
@@ -25,48 +24,73 @@
         <input type="file" id="fileInput" accept="image/*,application/pdf" hidden />
         <div id="fileInfo" class="fileinfo"></div>
       </div>
+
+      <div id="rotateBar" class="row small hidden">
+        <span>向きの調整:</span>
+        <button id="rotLeft" class="ghost">⟲ 左90°</button>
+        <button id="rotRight" class="ghost">⟳ 右90°</button>
+        <span id="rotLabel" class="status">0°</span>
+        <span class="hint">※ 表の文字が横書きで読める向きにしてから抽出すると精度が上がります</span>
+      </div>
+
       <div class="row">
-        <button id="extractBtn" class="primary" disabled>座標を抽出する</button>
+        <button id="extractBtn" class="primary" disabled>この向きで座標を抽出する</button>
         <span id="extractStatus" class="status"></span>
       </div>
     </div>
 
-    <div id="resultCard" class="card hidden">
-      <h2>2. 抽出結果を確認・修正</h2>
-      <div id="overallBanner" class="banner"></div>
-      <div id="warnings" class="warnings"></div>
-      <div class="row small">
-        <label>要チェックのしきい値(信頼度%):
-          <input type="number" id="threshold" min="0" max="100" step="1" style="width:70px" />
-        </label>
-        <span id="lowCount" class="status"></span>
-        <button id="addRowBtn" class="ghost">＋行を追加</button>
+    <!-- 見比べエリア(画像=左 / 結果=右) -->
+    <div id="compare" class="compare hidden">
+      <div class="imgpane">
+        <div class="imgpane-head">
+          <strong>元画像(見比べ用)</strong>
+          <span class="spacer"></span>
+          <button id="rotLeft2" class="ghost mini">⟲</button>
+          <button id="rotRight2" class="ghost mini">⟳</button>
+          <label class="zoomlabel">拡大 <input type="range" id="zoom" min="40" max="220" value="100"></label>
+        </div>
+        <div id="imgWrap" class="imgwrap">
+          <canvas id="imgCanvas"></canvas>
+          <p id="pdfNote" class="hint hidden">PDF はプレビュー・回転に未対応です(そのまま抽出します)。</p>
+        </div>
       </div>
-      <p class="hint">信頼度が低い行は色付きで表示されます。元資料と見比べて数値を直せます。</p>
-      <div class="tablewrap">
-        <table id="coordTable">
-          <thead>
-            <tr><th>#</th><th>X 座標</th><th>Y 座標</th><th>信頼度</th><th>備考</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
 
-    <div id="outputCard" class="card hidden">
-      <h2>3. テキストをダウンロード</h2>
-      <div class="row small">
-        <label>ファイル名: <input type="text" id="filename" value="coords.txt" style="width:200px" /></label>
-        <button id="downloadBtn" class="primary">txt をダウンロード</button>
+      <div class="datapane">
+        <div class="card">
+          <h2>2. 抽出結果を確認・修正</h2>
+          <div id="overallBanner" class="banner"></div>
+          <div id="warnings" class="warnings"></div>
+          <div class="row small">
+            <label>要チェックのしきい値(信頼度%):
+              <input type="number" id="threshold" min="0" max="100" step="1" style="width:64px" />
+            </label>
+            <span id="lowCount" class="status"></span>
+            <button id="addRowBtn" class="ghost">＋行を追加</button>
+          </div>
+          <div class="tablewrap">
+            <table id="coordTable">
+              <thead>
+                <tr><th>#</th><th>X 座標</th><th>Y 座標</th><th>信頼度</th><th>備考</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>3. テキストをダウンロード</h2>
+          <div class="row small">
+            <label>ファイル名: <input type="text" id="filename" value="coords.txt" style="width:180px" /></label>
+            <button id="downloadBtn" class="primary">txt をダウンロード</button>
+          </div>
+          <p class="hint">形式: 各行「X Y」半角スペース区切り(写真通り 左X・右Y)</p>
+          <textarea id="txtPreview" rows="8" readonly></textarea>
+        </div>
       </div>
-      <p class="hint">形式: 各行「X Y」半角スペース区切り(写真通り 左X・右Y)</p>
-      <textarea id="txtPreview" rows="12" readonly></textarea>
     </div>
   </section>
 
-  <footer>
-    <p>座標テキスト化ツール — 抽出: Claude API</p>
-  </footer>
+  <footer><p>座標テキスト化ツール — 抽出: Claude API</p></footer>
 
   <script src="config.js" onerror="window.__noConfig=true"></script>
   <script src="app.js"></script>

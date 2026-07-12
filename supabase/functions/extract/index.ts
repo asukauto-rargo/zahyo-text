@@ -1,80 +1,51 @@
 // extract: 写真 or PDF から X/Y 座標を抽出し、行ごとの信頼度を返す。
-// Claude (ビジョン) を使用。APIキーはサーバ側 (Supabase Secret) に秘匿。
+// Claude (ビジョン) を使用。JSON崩れ・途中切れにも強い堅牢パーサ付き。
 import { handlePreflight, json } from "../_shared/cors.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
-// 精度重視なら claude-opus-4-8。既定は速度と精度のバランスが良い sonnet。
-const MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5";
+const MODEL = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001";
 
 const SYSTEM_PROMPT =
   `あなたは日本の測量座標表(座標リスト/座標求積表など)の読み取り専門家です。` +
-  `画像またはPDFに写っている表から、各点の X座標 と Y座標 の数値だけを、` +
-  `表の上から下への出現順で、正確に読み取ってください。\n` +
-  `重要なルール:\n` +
-  `- 抽出するのは X座標(左側)と Y座標(右側)の2列のみ。点名・備考などの他の列は出力しない。\n` +
-  `- 数値は表記そのまま(符号・小数点・桁を保持)。例: -24210.139 や 498.965。カンマは除去する。\n` +
-  `- 手書きの赤線・下線などは無視し、印字された数値のみを対象とする。\n` +
-  `- 1点でも読み取りに自信がない桁がある行は confidence を下げ、note に理由を書く。\n` +
-  `- 表が複数ある場合は、画像内の左上→右下の順で、各表の行を順に並べる。\n` +
-  `- 数値が潰れている/隠れている/判読不能な桁は推測せず、その桁を "?" とし confidence を大きく下げる。\n` +
-  `出力は必ず指定のJSONスキーマのみ。前置きや説明文は一切書かない。`;
+  `画像またはPDFの表から、各点の X座標(左) と Y座標(右) の数値だけを、上から下への出現順で正確に読み取ります。\n` +
+  `ルール:\n` +
+  `- 抽出は X座標 と Y座標 の2列のみ。点名・備考などの他列は出さない。\n` +
+  `- 数値は表記そのまま(符号・小数点・桁を保持)。カンマは除去。例 -24210.139 / 498.965。\n` +
+  `- 手書きの赤線・下線は無視。印字された数値のみ。\n` +
+  `- 判読不能な桁は推測せず "?" とし、その行の confidence を大きく下げる。\n` +
+  `- 表が複数あれば左上→右下の順に各行を連結。\n` +
+  `- note は原則空文字。不安な時だけ10文字以内で簡潔に。冗長な説明は禁止。\n` +
+  `出力は指定JSONのみ。前置き・コードフェンス・説明文は書かない。`;
 
 const USER_INSTRUCTION =
-  `この資料から X座標・Y座標を抽出し、次のJSONだけを返してください。\n` +
-  `{\n` +
-  `  "overall_confidence": <0-100の整数>,\n` +
-  `  "rows": [ { "x": "<X座標の文字列>", "y": "<Y座標の文字列>", "confidence": <0-100の整数>, "note": "<不安な点があれば理由、なければ空文字>" } ],\n` +
-  `  "warnings": [ "<全体的な注意点があれば>" ]\n` +
-  `}\n` +
-  `confidence は「その行の数値をどれだけ確実に読み取れたか」を表す。少しでも曖昧なら 90 未満にする。`;
+  `この資料から X座標・Y座標を抽出し、次の形のJSONだけを返してください。\n` +
+  `{"overall_confidence": <0-100>, "rows": [{"x":"<X>","y":"<Y>","confidence":<0-100>,"note":""}], "warnings": []}\n` +
+  `confidenceは各行の読み取り確度。少しでも曖昧なら90未満。`;
 
-interface ExtractRequest {
-  fileBase64: string; // data URL でなく純粋な base64
-  mediaType: string; // image/jpeg, image/png, application/pdf など
-}
+interface ExtractRequest { fileBase64: string; mediaType: string; }
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req);
   if (pre) return pre;
-
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
-  if (!ANTHROPIC_API_KEY) {
-    return json({ error: "ANTHROPIC_API_KEY が未設定です" }, 500);
-  }
+  if (!ANTHROPIC_API_KEY) return json({ error: "ANTHROPIC_API_KEY が未設定です" }, 500);
 
   let body: ExtractRequest;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: "invalid JSON body" }, 400);
-  }
-
+  try { body = await req.json(); } catch { return json({ error: "invalid JSON body" }, 400); }
   const { fileBase64, mediaType } = body;
-  if (!fileBase64 || !mediaType) {
-    return json({ error: "fileBase64 と mediaType は必須です" }, 400);
-  }
+  if (!fileBase64 || !mediaType) return json({ error: "fileBase64 と mediaType は必須です" }, 400);
 
-  // 画像 or PDF でコンテンツブロックを切り替える
   const isPdf = mediaType === "application/pdf";
   const mediaBlock = isPdf
-    ? {
-      type: "document",
-      source: { type: "base64", media_type: "application/pdf", data: fileBase64 },
-    }
-    : {
-      type: "image",
-      source: { type: "base64", media_type: mediaType, data: fileBase64 },
-    };
+    ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: fileBase64 } }
+    : { type: "image", source: { type: "base64", media_type: mediaType, data: fileBase64 } };
 
   const payload = {
     model: MODEL,
     max_tokens: 8000,
     system: SYSTEM_PROMPT,
     messages: [
-      {
-        role: "user",
-        content: [mediaBlock, { type: "text", text: USER_INSTRUCTION }],
-      },
+      { role: "user", content: [mediaBlock, { type: "text", text: USER_INSTRUCTION }] },
     ],
   };
 
@@ -99,54 +70,84 @@ Deno.serve(async (req) => {
   }
 
   const data = await anthropicRes.json();
-  const text: string = (data?.content ?? [])
+  const textPart: string = (data?.content ?? [])
     .filter((c: { type: string }) => c.type === "text")
     .map((c: { text: string }) => c.text)
-    .join("\n");
+    .join("");
+  // プレフィルの "{" を先頭に戻す
+  const full = textPart;
+  const stop = data?.stop_reason ?? "";
+  console.log(`extract: len=${full.length} stop=${stop} model=${MODEL}`);
 
-  const parsed = extractJson(text);
-  if (!parsed) {
-    return json({ error: "抽出結果をJSONとして解釈できませんでした", raw: text }, 502);
+  const types = (data?.content ?? []).map((c: { type: string }) => c.type).join(",");
+  const parsed = robustParse(full);
+  if (!parsed || parsed.rows.length === 0) {
+    return json({ error: `座標を読み取れませんでした (stop=${stop}, types=${types}, len=${full.length})`, stop_reason: stop, raw_head: full.slice(0, 300) }, 502);
   }
 
-  // 正規化: 数値文字列のカンマ除去・トリム
-  const rows = Array.isArray(parsed.rows) ? parsed.rows : [];
-  const cleaned = rows.map((r: Record<string, unknown>) => ({
+  const cleaned = parsed.rows.map((r) => ({
     x: cleanNum(String(r.x ?? "")),
     y: cleanNum(String(r.y ?? "")),
     confidence: clampConf(r.confidence),
-    note: String(r.note ?? ""),
-  }));
+    note: String(r.note ?? "").slice(0, 40),
+  })).filter((r) => r.x !== "" || r.y !== "");
+
+  const warnings = parsed.warnings.slice();
+  if (stop === "max_tokens") warnings.push("出力が上限に達したため、末尾の行が欠けている可能性があります。点数をご確認ください。");
 
   return json({
     overall_confidence: clampConf(parsed.overall_confidence),
     rows: cleaned,
-    warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
+    warnings,
     model: MODEL,
     usage: data?.usage ?? null,
   });
 });
 
-// モデル出力から JSON 部分を取り出す
-function extractJson(text: string): Record<string, unknown> | null {
-  const trimmed = text.trim();
-  try {
-    return JSON.parse(trimmed);
-  } catch { /* try to find a JSON block */ }
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start >= 0 && end > start) {
-    try {
-      return JSON.parse(trimmed.slice(start, end + 1));
-    } catch { /* fallthrough */ }
+interface Parsed { overall_confidence: unknown; rows: Record<string, unknown>[]; warnings: string[]; }
+
+// JSON崩れ・途中切れに強いパーサ
+function robustParse(text: string): Parsed | null {
+  const stripped = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+  // 1) まず素直に全体をパース
+  const whole = tryParse(stripped) ?? tryParse(sliceBraces(stripped));
+  if (whole && Array.isArray((whole as Record<string, unknown>).rows)) {
+    const w = whole as Record<string, unknown>;
+    return { overall_confidence: w.overall_confidence, rows: w.rows as Record<string, unknown>[], warnings: toStrArr(w.warnings) };
   }
-  return null;
+
+  // 2) 行オブジェクトを個別に正規表現で回収(途中切れ・末尾破損に強い)
+  const rows: Record<string, unknown>[] = [];
+  const re = /\{[^{}]*?"x"[^{}]*?\}/g;
+  for (const m of stripped.matchAll(re)) {
+    const r = tryParse(m[0]);
+    if (r && (r as Record<string, unknown>).x !== undefined) rows.push(r as Record<string, unknown>);
+  }
+  if (rows.length === 0) return null;
+
+  let overall = 0;
+  const om = stripped.match(/"overall_confidence"\s*:\s*(\d+)/);
+  if (om) overall = Number(om[1]);
+
+  return {
+    overall_confidence: overall,
+    rows,
+    warnings: ["出力の一部が壊れていたため、読める行のみ復元しました。点数と末尾を必ず確認してください。"],
+  };
 }
 
-function cleanNum(s: string): string {
-  return s.replace(/,/g, "").replace(/\s+/g, "").trim();
+function tryParse(s: string): unknown | null {
+  try { return JSON.parse(s); } catch { return null; }
 }
-
+function sliceBraces(s: string): string {
+  const a = s.indexOf("{"); const b = s.lastIndexOf("}");
+  return a >= 0 && b > a ? s.slice(a, b + 1) : s;
+}
+function toStrArr(v: unknown): string[] {
+  return Array.isArray(v) ? v.map((x) => String(x)) : [];
+}
+function cleanNum(s: string): string { return s.replace(/,/g, "").replace(/\s+/g, "").trim(); }
 function clampConf(v: unknown): number {
   const n = Number(v);
   if (!isFinite(n)) return 0;

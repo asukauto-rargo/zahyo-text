@@ -1,18 +1,20 @@
 "use strict";
 
-// ====== 設定読み込み ======
+// ====== 設定 ======
 const CONFIG = window.APP_CONFIG || null;
 const FN_BASE = CONFIG ? `${CONFIG.SUPABASE_URL.replace(/\/$/, "")}/functions/v1` : "";
 const ANON = CONFIG ? CONFIG.SUPABASE_ANON_KEY : "";
 let threshold = CONFIG?.CONFIDENCE_THRESHOLD ?? 90;
 
-// 抽出結果の状態
-let currentRows = []; // [{x,y,confidence,note}]
+// 状態
+let currentRows = [];
 let currentOverall = null;
 let currentSource = "";
 let selectedFile = null;
+let isPdf = false;
+let loadedImg = null;      // 読み込んだ画像
+let rotation = 0;          // 0/90/180/270
 
-// ====== 起動時 ======
 document.addEventListener("DOMContentLoaded", () => {
   if (!CONFIG || !CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes("YOUR-PROJECT")) {
     $("#configWarning").classList.remove("hidden");
@@ -23,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ====== 小道具 ======
-function $(sel) { return document.querySelector(sel); }
+function $(s) { return document.querySelector(s); }
 function el(tag, props = {}, children = []) {
   const e = document.createElement(tag);
   Object.assign(e, props);
@@ -33,11 +35,7 @@ function el(tag, props = {}, children = []) {
 async function callFn(path, { method = "POST", body } = {}) {
   const res = await fetch(`${FN_BASE}/${path}`, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${ANON}`,
-      "apikey": ANON,
-    },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${ANON}`, "apikey": ANON },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -52,41 +50,84 @@ function setupUpload() {
   dz.addEventListener("click", () => input.click());
   dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("drag"); });
   dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
-  dz.addEventListener("drop", (e) => {
-    e.preventDefault(); dz.classList.remove("drag");
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-  });
+  dz.addEventListener("drop", (e) => { e.preventDefault(); dz.classList.remove("drag"); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
   input.addEventListener("change", () => { if (input.files[0]) handleFile(input.files[0]); });
 }
+
 function handleFile(file) {
   const ok = file.type.startsWith("image/") || file.type === "application/pdf";
   if (!ok) { alert("画像か PDF を選んでください"); return; }
   selectedFile = file;
   currentSource = file.name;
+  isPdf = file.type === "application/pdf";
+  rotation = 0;
   $("#fileInfo").textContent = `選択中: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
   $("#extractBtn").disabled = false;
+
+  if (isPdf) {
+    loadedImg = null;
+    $("#rotateBar").classList.add("hidden");
+    $("#pdfNote").classList.remove("hidden");
+  } else {
+    $("#rotateBar").classList.remove("hidden");
+    $("#pdfNote").classList.add("hidden");
+    const img = new Image();
+    img.onload = () => { loadedImg = img; updateRotLabel(); redraw(); $("#compare").classList.remove("hidden"); };
+    img.src = URL.createObjectURL(file);
+  }
 }
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+
+// ====== 回転・描画 ======
+function setRotation(deg) { rotation = ((deg % 360) + 360) % 360; updateRotLabel(); redraw(); }
+function updateRotLabel() { const l = $("#rotLabel"); if (l) l.textContent = rotation + "°"; }
+
+function redraw() {
+  const canvas = $("#imgCanvas");
+  if (!loadedImg || !canvas) return;
+  const swap = rotation === 90 || rotation === 270;
+  const maxDim = 2200;
+  const iw = loadedImg.naturalWidth, ih = loadedImg.naturalHeight;
+  const scale = Math.min(1, maxDim / Math.max(iw, ih));
+  const w = Math.round(iw * scale), h = Math.round(ih * scale);
+  canvas.width = swap ? h : w;
+  canvas.height = swap ? w : h;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(rotation * Math.PI / 180);
+  ctx.drawImage(loadedImg, -w / 2, -h / 2, w, h);
+  ctx.restore();
 }
 
 // ====== ボタン ======
 function bindButtons() {
   $("#extractBtn").addEventListener("click", runExtract);
-  $("#threshold").addEventListener("input", (e) => {
-    threshold = Number(e.target.value) || 0;
-    renderTable();
-  });
-  $("#addRowBtn").addEventListener("click", () => {
-    currentRows.push({ x: "", y: "", confidence: 100, note: "手動追加" });
-    renderTable();
-  });
+  $("#rotLeft").addEventListener("click", () => setRotation(rotation - 90));
+  $("#rotRight").addEventListener("click", () => setRotation(rotation + 90));
+  $("#rotLeft2").addEventListener("click", () => setRotation(rotation - 90));
+  $("#rotRight2").addEventListener("click", () => setRotation(rotation + 90));
+  $("#zoom").addEventListener("input", (e) => { $("#imgCanvas").style.width = e.target.value + "%"; });
+  $("#threshold").addEventListener("input", (e) => { threshold = Number(e.target.value) || 0; renderTable(); });
+  $("#addRowBtn").addEventListener("click", () => { currentRows.push({ x: "", y: "", confidence: 100, note: "手動追加" }); renderTable(); });
   $("#downloadBtn").addEventListener("click", downloadTxt);
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// 抽出に送るデータ(画像は今の向きで再エンコード)
+async function getExtractData() {
+  if (isPdf) return { fileBase64: await fileToBase64(selectedFile), mediaType: "application/pdf" };
+  const canvas = $("#imgCanvas");
+  const b64 = canvas.toDataURL("image/jpeg", 0.92).split(",")[1];
+  return { fileBase64: b64, mediaType: "image/jpeg" };
 }
 
 // ====== 抽出 ======
@@ -95,15 +136,14 @@ async function runExtract() {
   if (!CONFIG) { alert("config.js が未設定です"); return; }
   const btn = $("#extractBtn");
   btn.disabled = true;
-  $("#extractStatus").textContent = "抽出中… (数十秒かかることがあります)";
+  $("#extractStatus").textContent = "抽出中… (10〜60秒)";
   try {
-    const b64 = await fileToBase64(selectedFile);
-    const data = await callFn("extract", {
-      body: { fileBase64: b64, mediaType: selectedFile.type },
-    });
+    const payload = await getExtractData();
+    const data = await callFn("extract", { body: payload });
     currentRows = data.rows || [];
     currentOverall = data.overall_confidence ?? null;
     $("#extractStatus").textContent = `抽出完了: ${currentRows.length} 点 (モデル: ${data.model || "-"})`;
+    $("#compare").classList.remove("hidden");
     showResult(data.warnings || []);
   } catch (err) {
     $("#extractStatus").textContent = "";
@@ -114,14 +154,10 @@ async function runExtract() {
 }
 
 function showResult(warnings) {
-  $("#resultCard").classList.remove("hidden");
-  $("#outputCard").classList.remove("hidden");
   const b = $("#overallBanner");
-  const cls = currentOverall >= threshold ? "ok" : "warn";
-  b.className = "banner " + cls;
+  b.className = "banner " + (currentOverall >= threshold ? "ok" : "warn");
   b.textContent = `全体信頼度: ${currentOverall ?? "-"}% ／ 抽出点数: ${currentRows.length}`;
-  $("#warnings").innerHTML = warnings.length
-    ? "注意: " + warnings.map((w) => escapeHtml(w)).join(" / ") : "";
+  $("#warnings").innerHTML = warnings.length ? "注意: " + warnings.map(escapeHtml).join(" / ") : "";
   renderTable();
 }
 
@@ -157,12 +193,9 @@ function tdInput(row, key) {
   return td;
 }
 
-// ====== txt 出力 ======
-function buildTxt() {
-  return currentRows.map((r) => `${(r.x ?? "").trim()} ${(r.y ?? "").trim()}`).join("\r\n") + "\r\n";
-}
+// ====== txt ======
+function buildTxt() { return currentRows.map((r) => `${(r.x ?? "").trim()} ${(r.y ?? "").trim()}`).join("\r\n") + "\r\n"; }
 function updatePreview() { $("#txtPreview").value = buildTxt(); }
-
 function downloadTxt() {
   if (currentRows.length === 0) { alert("ダウンロードする行がありません"); return; }
   const blob = new Blob([buildTxt()], { type: "text/plain" });
@@ -170,14 +203,6 @@ function downloadTxt() {
   document.body.append(a); a.click(); a.remove();
 }
 
-// ====== ユーティリティ ======
-function sanitize(name) {
-  let n = (name || "coords.txt").replace(/[\/\\:*?"<>|]/g, "_").trim();
-  if (!n.toLowerCase().endsWith(".txt")) n += ".txt";
-  return n;
-}
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => (
-    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-  ));
-}
+// ====== util ======
+function sanitize(name) { let n = (name || "coords.txt").replace(/[\/\\:*?"<>|]/g, "_").trim(); if (!n.toLowerCase().endsWith(".txt")) n += ".txt"; return n; }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
