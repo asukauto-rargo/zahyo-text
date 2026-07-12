@@ -10,17 +10,16 @@ let threshold = CONFIG?.CONFIDENCE_THRESHOLD ?? 90;
 let currentRows = []; // [{x,y,confidence,note}]
 let currentOverall = null;
 let currentSource = "";
+let selectedFile = null;
 
-// ====== 起動時チェック ======
+// ====== 起動時 ======
 document.addEventListener("DOMContentLoaded", () => {
   if (!CONFIG || !CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes("YOUR-PROJECT")) {
     $("#configWarning").classList.remove("hidden");
   }
   $("#threshold").value = threshold;
-  setupTabs();
   setupUpload();
   bindButtons();
-  loadMailTarget();
 });
 
 // ====== 小道具 ======
@@ -31,10 +30,8 @@ function el(tag, props = {}, children = []) {
   for (const c of [].concat(children)) e.append(c);
   return e;
 }
-async function callFn(path, { method = "POST", body, query } = {}) {
-  const url = new URL(`${FN_BASE}/${path}`);
-  if (query) Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url, {
+async function callFn(path, { method = "POST", body } = {}) {
+  const res = await fetch(`${FN_BASE}/${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -48,22 +45,7 @@ async function callFn(path, { method = "POST", body, query } = {}) {
   return data;
 }
 
-// ====== タブ ======
-function setupTabs() {
-  document.querySelectorAll(".tab").forEach((t) => {
-    t.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
-      t.classList.add("active");
-      document.querySelectorAll(".tabpanel").forEach((p) => p.classList.add("hidden"));
-      $(`#tab-${t.dataset.tab}`).classList.remove("hidden");
-      if (t.dataset.tab === "history") loadHistory();
-      if (t.dataset.tab === "admin") loadMailStatus();
-    });
-  });
-}
-
 // ====== アップロード ======
-let selectedFile = null;
 function setupUpload() {
   const dz = $("#dropzone");
   const input = $("#fileInput");
@@ -84,17 +66,16 @@ function handleFile(file) {
   $("#fileInfo").textContent = `選択中: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
   $("#extractBtn").disabled = false;
 }
-
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1]); // data URL の後半
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-// ====== ボタン束ね ======
+// ====== ボタン ======
 function bindButtons() {
   $("#extractBtn").addEventListener("click", runExtract);
   $("#threshold").addEventListener("input", (e) => {
@@ -106,10 +87,6 @@ function bindButtons() {
     renderTable();
   });
   $("#downloadBtn").addEventListener("click", downloadTxt);
-  $("#sendBtn").addEventListener("click", sendMail);
-  $("#reloadHistory").addEventListener("click", loadHistory);
-  $("#corrSubmit").addEventListener("click", submitCorrection);
-  $("#saveEmailBtn").addEventListener("click", saveEmail);
 }
 
 // ====== 抽出 ======
@@ -159,8 +136,7 @@ function renderTable() {
     tr.append(el("td", { textContent: String(i + 1) }));
     tr.append(tdInput(r, "x"));
     tr.append(tdInput(r, "y"));
-    const c = el("td", { className: "confcell", textContent: isFinite(conf) ? conf + "%" : "-" });
-    tr.append(c);
+    tr.append(el("td", { className: "confcell", textContent: isFinite(conf) ? conf + "%" : "-" }));
     tr.append(tdInput(r, "note"));
     const del = el("td");
     const db = el("button", { className: "delbtn", textContent: "削除" });
@@ -188,151 +164,10 @@ function buildTxt() {
 function updatePreview() { $("#txtPreview").value = buildTxt(); }
 
 function downloadTxt() {
+  if (currentRows.length === 0) { alert("ダウンロードする行がありません"); return; }
   const blob = new Blob([buildTxt()], { type: "text/plain" });
   const a = el("a", { href: URL.createObjectURL(blob), download: sanitize($("#filename").value) });
   document.body.append(a); a.click(); a.remove();
-}
-
-// ====== メール送信 ======
-async function loadMailTarget() {
-  if (!CONFIG) return;
-  try {
-    const s = await callFn("settings", { method: "GET" });
-    $("#mailTarget").textContent = s.configured
-      ? `送信先: ${s.masked}` : "送信先メールが未登録です(③設定タブで登録)";
-  } catch (e) {
-    $("#mailTarget").textContent = "送信先の取得に失敗: " + e.message;
-  }
-}
-
-async function sendMail() {
-  if (currentRows.length === 0) { alert("送信する行がありません"); return; }
-  const btn = $("#sendBtn");
-  btn.disabled = true;
-  $("#sendStatus").textContent = "送信中…";
-  try {
-    const data = await callFn("send", {
-      body: {
-        rows: currentRows,
-        filename: sanitize($("#filename").value),
-        source_name: currentSource,
-        overall_confidence: currentOverall,
-      },
-    });
-    $("#sendStatus").textContent = `送信完了 (記録ID: ${data.record?.id?.slice(0, 8) ?? "-"})`;
-  } catch (e) {
-    $("#sendStatus").textContent = "";
-    alert("送信に失敗しました: " + e.message);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-// ====== 履歴・修正 ======
-let historyRecords = [];
-async function loadHistory() {
-  try {
-    const data = await callFn("records", { method: "GET", query: { corrections: "1" } });
-    historyRecords = data.records || [];
-    renderHistory(historyRecords);
-    fillCorrectionSelect(historyRecords);
-    renderCorrections(data.corrections || [], historyRecords);
-  } catch (e) {
-    alert("履歴の取得に失敗: " + e.message);
-  }
-}
-function renderHistory(records) {
-  const tb = $("#historyTable").querySelector("tbody");
-  tb.innerHTML = "";
-  records.forEach((r) => {
-    tb.append(el("tr", {}, [
-      el("td", { textContent: fmtDate(r.created_at) }),
-      el("td", { textContent: r.filename }),
-      el("td", { textContent: r.recipient }),
-      el("td", { textContent: String(r.row_count) }),
-      el("td", { textContent: r.overall_confidence != null ? r.overall_confidence + "%" : "-" }),
-      el("td", { textContent: r.source_name || "-" }),
-    ]));
-  });
-  if (!records.length) tb.append(el("tr", {}, [el("td", { colSpan: 6, textContent: "履歴はまだありません" })]));
-}
-function fillCorrectionSelect(records) {
-  const sel = $("#corrRecord");
-  sel.innerHTML = "";
-  records.forEach((r) => {
-    sel.append(el("option", { value: r.id, textContent: `${fmtDate(r.created_at)} ${r.filename} (${r.row_count}点)` }));
-  });
-}
-function renderCorrections(corrections, records) {
-  const map = Object.fromEntries(records.map((r) => [r.id, r.filename]));
-  const tb = $("#corrTable").querySelector("tbody");
-  tb.innerHTML = "";
-  corrections.forEach((c) => {
-    tb.append(el("tr", {}, [
-      el("td", { textContent: fmtDate(c.created_at) }),
-      el("td", { textContent: map[c.sent_record_id] || "-" }),
-      el("td", { textContent: c.line_number ?? "-" }),
-      el("td", { textContent: c.current_value || "-" }),
-      el("td", { textContent: c.desired_value || "-" }),
-      el("td", { textContent: c.comment || "-" }),
-      el("td", { textContent: c.status }),
-    ]));
-  });
-  if (!corrections.length) tb.append(el("tr", {}, [el("td", { colSpan: 7, textContent: "修正依頼はまだありません" })]));
-}
-
-async function submitCorrection() {
-  const recId = $("#corrRecord").value;
-  if (!recId) { alert("対象ファイルを選んでください"); return; }
-  $("#corrStatus").textContent = "登録中…";
-  try {
-    await callFn("correction", {
-      body: {
-        sent_record_id: recId,
-        line_number: Number($("#corrLine").value) || null,
-        current_value: $("#corrCurrent").value || null,
-        desired_value: $("#corrDesired").value || null,
-        comment: $("#corrComment").value || null,
-      },
-    });
-    $("#corrStatus").textContent = "登録しました";
-    $("#corrLine").value = ""; $("#corrCurrent").value = "";
-    $("#corrDesired").value = ""; $("#corrComment").value = "";
-    loadHistory();
-  } catch (e) {
-    $("#corrStatus").textContent = "";
-    alert("登録に失敗: " + e.message);
-  }
-}
-
-// ====== 設定(メール登録) ======
-async function loadMailStatus() {
-  const b = $("#mailStatus");
-  try {
-    const s = await callFn("settings", { method: "GET" });
-    b.className = "banner " + (s.configured ? "ok" : "warn");
-    b.textContent = s.configured
-      ? `登録済み: ${s.masked} (更新: ${fmtDate(s.updated_at)})`
-      : "まだ登録されていません";
-  } catch (e) {
-    b.className = "banner warn";
-    b.textContent = "状態取得に失敗: " + e.message;
-  }
-}
-async function saveEmail() {
-  const email = $("#adminEmail").value.trim();
-  const key = $("#adminKey").value;
-  if (!email || !key) { alert("メールと管理キーを入力してください"); return; }
-  $("#adminSaveStatus").textContent = "登録中…";
-  try {
-    const r = await callFn("settings", { body: { admin_key: key, email } });
-    $("#adminSaveStatus").textContent = `登録しました: ${r.masked}`;
-    $("#adminEmail").value = ""; $("#adminKey").value = "";
-    loadMailStatus(); loadMailTarget();
-  } catch (e) {
-    $("#adminSaveStatus").textContent = "";
-    alert("登録に失敗: " + e.message);
-  }
 }
 
 // ====== ユーティリティ ======
@@ -340,12 +175,6 @@ function sanitize(name) {
   let n = (name || "coords.txt").replace(/[\/\\:*?"<>|]/g, "_").trim();
   if (!n.toLowerCase().endsWith(".txt")) n += ".txt";
   return n;
-}
-function fmtDate(s) {
-  if (!s) return "-";
-  const d = new Date(s);
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => (
