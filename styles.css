@@ -174,52 +174,75 @@ button.mini { padding: 4px 10px; }
 /* 行の手動追加ボタン */
 .addrow { margin: 2px 0 4px; font-size: 13px; }
 
-/* 猫ちゃん(右上に固定・ドット絵。回し車/餌/睡眠をランダム、クリックでへそてん) */
+/* 猫ちゃんのお部屋(右上に固定・横長。回し車/ベッド/餌場を行き来) */
 #catWidget {
-  position: fixed; top: 12px; right: 12px; width: 96px; height: 92px;
-  z-index: 9998; user-select: none;
-  background: rgba(255,255,255,.72); border: 1px solid var(--border);
-  border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  position: fixed; top: 12px; right: 12px; width: 300px; height: 104px;
+  z-index: 9998; user-select: none; overflow: hidden;
+  background: linear-gradient(#fbf6ee, #f3ead9); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.10);
 }
-.cat-stage { position: relative; width: 100%; height: 100%; }
-.cat-floor { position: absolute; left: 10px; right: 10px; bottom: 12px; height: 3px; background: #e2d7c6; border-radius: 2px; }
-.cat-sprite { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); cursor: pointer; }
-.cat-sprite svg { display: block; image-rendering: pixelated; }
-.cat-inner { transform-origin: 50% 70%; }
+.stage { position: relative; width: 100%; height: 100%; }
+.floor { position: absolute; left: 0; right: 0; bottom: 16px; height: 2px; background: #d9c8ad; }
+.furni { position: absolute; bottom: 14px; }
+.furni.wheel { left: 8px; }
+.furni.bed { left: 132px; }
+.furni.bowl { left: 250px; bottom: 12px; }
+.furni svg { display: block; }
+.wheelinner { transform-box: fill-box; transform-origin: 50% 50%; }
+.wheel.spin .wheelinner { animation: wheelSpin .7s linear infinite; }
+@keyframes wheelSpin { to { transform: rotate(360deg); } }
+.zzz { position: absolute; left: 150px; top: 6px; font-size: 12px; font-weight: 700; color: #9a8b78; opacity: 0; }
+.zzz.on { animation: zzz 2.2s ease-in-out infinite; }
+@keyframes zzz { 0% { opacity: 0; transform: translateY(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
 
-/* 回し車 */
-.cat-wheel { position: absolute; left: 50%; top: 48%; width: 74px; height: 74px; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; }
-.state-run .cat-wheel { opacity: .85; animation: catspin 0.9s linear infinite; }
-.state-run .cat-inner { animation: catRun .16s steps(2) infinite; }
-@keyframes catspin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-@keyframes catRun { 0% { transform: translateY(0); } 100% { transform: translateY(-2px); } }
+/* 猫本体 */
+.cat { position: absolute; bottom: 12px; left: 20px; width: 64px; cursor: pointer; transition: left 1s linear; }
+.cat.flip { transform: scaleX(-1); }
+.catsvg { display: block; width: 100%; height: auto; transform-box: fill-box; transform-origin: 50% 62%; }
+.tail { transform-box: fill-box; transform-origin: 90% 86%; animation: tailSway 2.6s ease-in-out infinite; }
+@keyframes tailSway { 0%,100% { transform: rotate(-7deg); } 50% { transform: rotate(9deg); } }
+.leg { transform-box: fill-box; transform-origin: 50% 6%; }
+.head { transform-box: fill-box; transform-origin: 20% 84%; }
+.eyeClosed, .tongue { display: none; }
 
-/* 餌を食べる */
-.cat-bowl { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); opacity: 0; }
-.cat-bowl svg { display: block; image-rendering: pixelated; }
-.state-eat .cat-bowl { opacity: 1; }
-.state-eat .cat-inner { animation: catEat .55s ease-in-out infinite; }
-@keyframes catEat { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(4px) rotate(4deg); } }
+/* 歩く */
+.cat.walking .catsvg { animation: catBob .5s ease-in-out infinite; }
+.cat.walking .legFN, .cat.walking .legBF { animation: legA .5s linear infinite; }
+.cat.walking .legFF, .cat.walking .legBN { animation: legB .5s linear infinite; }
+@keyframes catBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes legA { 0%,100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
+@keyframes legB { 0%,100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
+
+/* 走る(回し車) */
+.cat.act-run .catsvg { animation: catBob .2s ease-in-out infinite; }
+.cat.act-run .legFN, .cat.act-run .legBF { animation: legA .2s linear infinite; }
+.cat.act-run .legFF, .cat.act-run .legBN { animation: legB .2s linear infinite; }
+
+/* 食べる */
+.cat.act-eat .head { animation: eatDip .6s ease-in-out infinite; }
+.cat.act-eat .tongue { display: block; }
+@keyframes eatDip { 0%,100% { transform: rotate(2deg); } 50% { transform: rotate(24deg); } }
+
+/* 毛づくろい */
+.cat.act-groom .head { animation: groom 1.2s ease-in-out infinite; }
+.cat.act-groom .tongue { display: block; }
+@keyframes groom { 0%,100% { transform: rotate(4deg); } 45% { transform: rotate(32deg); } 65% { transform: rotate(28deg); } }
 
 /* 寝る */
-.cat-zzz { position: absolute; left: 62%; top: 8px; font-size: 13px; color: #9a8b78; opacity: 0; font-weight: 700; }
-.state-sleep .cat-zzz { opacity: 1; animation: catZzz 2.2s ease-in-out infinite; }
-.state-sleep .cat-inner { animation: catBreath 2.6s ease-in-out infinite; }
-@keyframes catBreath { 0%,100% { transform: rotate(8deg) scaleY(1); } 50% { transform: rotate(8deg) scaleY(.94); } }
-@keyframes catZzz { 0% { transform: translateY(0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+.cat.act-sleep .catsvg { animation: breath 3s ease-in-out infinite; }
+.cat.act-sleep .eyeOpen { display: none; }
+.cat.act-sleep .eyeClosed { display: block; }
+@keyframes breath { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.95); } }
 
-/* へそてん(クリック時: 背中をつけてゴロゴロ) */
-.hesoten .cat-inner { animation: catRoll 1.8s ease-in-out; }
-@keyframes catRoll {
-  0% { transform: rotate(0); }
-  15% { transform: rotate(175deg); }
-  35% { transform: rotate(192deg); }
-  55% { transform: rotate(168deg); }
-  75% { transform: rotate(188deg); }
-  100% { transform: rotate(180deg); }
+/* へそてん */
+.cat.act-heso .catsvg { animation: heso 1.8s ease-in-out; }
+@keyframes heso {
+  0% { transform: rotate(0); } 15% { transform: rotate(172deg); }
+  35% { transform: rotate(192deg); } 55% { transform: rotate(168deg); }
+  75% { transform: rotate(188deg); } 100% { transform: rotate(180deg); }
 }
 .catheart { position: absolute; color: #ff5d8f; font-size: 15px; pointer-events: none; animation: catHeart 1.3s ease-out forwards; opacity: 0; }
-@keyframes catHeart { 0% { transform: translateY(0) scale(.5); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-40px) scale(1.1); opacity: 0; } }
+@keyframes catHeart { 0% { transform: translateY(0) scale(.5); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-38px) scale(1.1); opacity: 0; } }
 code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
 footer { padding: 16px 24px 32px; color: var(--muted); font-size: 12px; }
 
