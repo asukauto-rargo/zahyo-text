@@ -70,7 +70,10 @@
           <label class="zoomlabel">拡大 <input type="range" id="zoom" min="60" max="800" value="100"></label>
         </div>
         <div id="resultImgWrap" class="result-img-wrap">
-          <img id="resultImg" alt="元画像" />
+          <div class="imgstage">
+            <img id="resultImg" alt="元画像" />
+            <div id="imgHilite"></div>
+          </div>
           <p id="resultPdfNote" class="hint hidden">PDF は画像プレビュー非対応です。元のPDFを別途開いて見比べてください。</p>
         </div>
       </div>

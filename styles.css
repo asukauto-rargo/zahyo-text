@@ -149,7 +149,10 @@ button.mini { padding: 4px 10px; }
 .datapane .card { margin-bottom: 16px; }
 .zoomlabel { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
 .result-img-wrap { overflow: auto; }
+.imgstage { position: relative; display: inline-block; line-height: 0; min-width: 100%; }
 #resultImg { width: 100%; height: auto; display: block; border: 1px solid var(--border); border-radius: 6px; }
+#imgHilite { position: absolute; display: none; box-sizing: border-box; border: 2px solid #e53935; background: rgba(255,235,59,.38); border-radius: 2px; pointer-events: none; transition: all .12s ease; }
+.unit.active { outline: 2px solid var(--primary); outline-offset: 1px; }
 
 /* X と Y を隣接配置して目の移動を最小化 */
 .vals { display: flex; gap: 4px; flex-wrap: nowrap; }
@@ -211,6 +214,7 @@ button.mini { padding: 4px 10px; }
 .leg { transform-box: fill-box; transform-origin: 50% 6%; }
 .head { transform-box: fill-box; transform-origin: 20% 84%; }
 .eyeClosed, .tongue { display: none; }
+.catcurl { display: none; }
 
 /* 歩く */
 .cat.walking .catsvg { animation: catBob .5s ease-in-out infinite; }
@@ -230,16 +234,18 @@ button.mini { padding: 4px 10px; }
 .cat.act-eat .tongue { display: block; }
 @keyframes eatDip { 0%,100% { transform: rotate(2deg); } 50% { transform: rotate(24deg); } }
 
-/* 毛づくろい */
-.cat.act-groom .head { animation: groom 1.2s ease-in-out infinite; }
-.cat.act-groom .tongue { display: block; }
-@keyframes groom { 0%,100% { transform: rotate(4deg); } 45% { transform: rotate(32deg); } 65% { transform: rotate(28deg); } }
+/* 毛づくろい(前足で頭をなでる) */
+.cat.act-groom .head { animation: groomHead 1.4s ease-in-out infinite; }
+.cat.act-groom .legFN { animation: groomPaw 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0%; }
+@keyframes groomHead { 0%,100% { transform: rotate(6deg); } 45% { transform: rotate(20deg); } 65% { transform: rotate(18deg); } }
+@keyframes groomPaw { 0%,100% { transform: rotate(0); } 40% { transform: rotate(-128deg); } 65% { transform: rotate(-116deg); } }
 
-/* 寝る */
-.cat.act-sleep .catsvg { animation: breath 3s ease-in-out infinite; }
+/* 寝る(丸くなって寝る) */
+.cat.act-sleep .catnorm { display: none; }
+.cat.act-sleep .catcurl { display: block; animation: breath 3.2s ease-in-out infinite; }
 .cat.act-sleep .eyeOpen { display: none; }
 .cat.act-sleep .eyeClosed { display: block; }
-@keyframes breath { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.95); } }
+@keyframes breath { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.96); } }
 
 /* へそてん */
 .cat.act-heso .catsvg { animation: heso 1.8s ease-in-out; }

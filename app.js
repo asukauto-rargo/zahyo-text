@@ -166,9 +166,36 @@ function showWarnings(warnings) {
 }
 
 // ====== 結果表示 ======
+let activeUnit = null;
+function setActiveUnit(unit) {
+  if (activeUnit) activeUnit.classList.remove("active");
+  activeUnit = unit;
+  if (unit) unit.classList.add("active");
+}
+// 選択した点の位置を左の元画像上に黄色＋赤枠でハイライト(ブロックのbbox×行数で概算)
+function highlightRow(bi, i) {
+  const h = $("#imgHilite");
+  const bl = blocks[bi];
+  if (!h) return;
+  if (isPdf || !bl || !bl.bbox || bl.bbox.length !== 4) { h.style.display = "none"; return; }
+  const rc = Math.max(1, bl.rows.length);
+  const x0 = bl.bbox[0], y0 = bl.bbox[1], x1 = bl.bbox[2], y1 = bl.bbox[3];
+  const rowH = (y1 - y0) / rc, pad = rowH * 0.12;
+  const top = (y0 + i * rowH - pad) / 10;
+  const bot = (y0 + (i + 1) * rowH + pad) / 10;
+  h.style.display = "block";
+  h.style.left = (x0 / 10) + "%";
+  h.style.width = ((x1 - x0) / 10) + "%";
+  h.style.top = Math.max(0, top) + "%";
+  h.style.height = Math.max(1, bot - top) + "%";
+  try { h.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" }); } catch (e) { /* ignore */ }
+}
+
 function renderResults() {
   const cont = $("#blocks");
   cont.innerHTML = "";
+  activeUnit = null;
+  const hi = $("#imgHilite"); if (hi) hi.style.display = "none";
   blocks.forEach((bl, bi) => {
     const sec = el("div", { className: "block" });
     sec.append(el("div", { className: "blocktitle", textContent: `${bl.title || "(見出しなし)"}　(${bl.rows.length}点)` }));
@@ -194,6 +221,7 @@ function renderResults() {
       vals.append(makeVal("X", r, "x"));
       vals.append(makeVal("Y", r, "y"));
       unit.append(vals);
+      unit.addEventListener("click", (e) => { if (e.target.closest("button")) return; setActiveUnit(unit); highlightRow(bi, i); });
       sec.append(unit);
     });
     // この表に手動で行を追加
