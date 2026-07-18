@@ -189,7 +189,9 @@ button.mini { padding: 4px 10px; }
   position: fixed; top: 12px; right: 12px; z-index: 9999;
   font-size: 12px; padding: 5px 10px; border-radius: 999px;
   border: 1px solid var(--border); background: #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  display: inline-flex; align-items: center; gap: 5px;
 }
+#catToggle .catface { image-rendering: pixelated; display: block; }
 #catWidget:not(.hidden) ~ #catToggle { top: 122px; }
 .stage { position: relative; width: 100%; height: 100%; }
 .floor { position: absolute; left: 0; right: 0; bottom: 16px; height: 2px; background: #d9c8ad; }

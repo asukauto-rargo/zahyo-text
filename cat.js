@@ -59,6 +59,9 @@
   const BED_SVG = `<svg width="60" height="24" viewBox="0 0 20 8" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${px(1, 4, 18, 3, "#b98a6a")}${px(0, 5, 20, 2, "#a97e5f")}${px(3, 3, 14, 2, "#eccfa9")}</svg>`;
   const BOWL_SVG = `<svg width="36" height="18" viewBox="0 0 12 6" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${px(1, 1, 10, 1, "#7a4a24")}${px(0, 2, 12, 1, "#cf7a33")}${px(1, 3, 10, 2, "#cf7a33")}${px(3, 5, 6, 1, "#b3652a")}</svg>`;
 
+  // トグル用のラグドール顔アイコン(正面・ドット絵)
+  const FACE_SVG = `<svg class="catface" width="16" height="16" viewBox="0 0 14 12" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${px(2, 0, 3, 2, B)}${px(9, 0, 3, 2, B)}${px(3, 1, 1, 1, PK)}${px(10, 1, 1, 1, PK)}${px(1, 2, 12, 9, C)}${px(2, 1, 10, 1, C)}${px(1, 2, 12, 2, B)}${px(3, 5, 2, 2, E)}${px(9, 5, 2, 2, E)}${px(3, 5, 1, 1, "#cfe8f5")}${px(9, 5, 1, 1, "#cfe8f5")}${px(4, 8, 6, 3, L)}${px(6, 8, 2, 1, N)}</svg>`;
+
   const widget = document.createElement("div");
   widget.id = "catWidget";
   widget.innerHTML =
@@ -136,7 +139,7 @@
   }
   function setHidden(h) {
     widget.classList.toggle("hidden", h);
-    toggle.textContent = h ? "🐱 めちゃんを解放" : "🐱 めちゃんを格納";
+    toggle.innerHTML = FACE_SVG + `<span>${h ? "めちゃんを解放" : "めちゃんを格納"}</span>`;
     try { localStorage.setItem("catHidden", h ? "1" : "0"); } catch (e) { /* ignore */ }
   }
   function start() {
