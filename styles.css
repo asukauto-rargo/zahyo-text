@@ -151,8 +151,8 @@ button.mini { padding: 4px 10px; }
 .result-img-wrap { overflow: auto; }
 .imgstage { position: relative; display: inline-block; line-height: 0; min-width: 100%; }
 #resultImg { width: 100%; height: auto; display: block; border: 1px solid var(--border); border-radius: 6px; }
-#imgHilite { position: absolute; display: none; box-sizing: border-box; border: 2px solid #e53935; background: rgba(255,235,59,.38); border-radius: 2px; pointer-events: none; transition: all .12s ease; }
 .unit.active { outline: 2px solid var(--primary); outline-offset: 1px; }
+.selinfo { position: sticky; top: 0; z-index: 3; margin: 6px 0; padding: 6px 10px; background: #eaf1ff; border: 1px solid #9bb8f0; border-radius: 6px; font-size: 14px; font-weight: 600; color: #23407a; }
 
 /* X と Y を隣接配置して目の移動を最小化 */
 .vals { display: flex; gap: 4px; flex-wrap: nowrap; }

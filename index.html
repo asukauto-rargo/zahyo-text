@@ -72,7 +72,6 @@
         <div id="resultImgWrap" class="result-img-wrap">
           <div class="imgstage">
             <img id="resultImg" alt="元画像" />
-            <div id="imgHilite"></div>
           </div>
           <p id="resultPdfNote" class="hint hidden">PDF は画像プレビュー非対応です。元のPDFを別途開いて見比べてください。</p>
         </div>
@@ -83,6 +82,7 @@
           <h2>2. 抽出結果を確認・修正</h2>
           <div id="overallBanner" class="banner"></div>
           <div id="warnings" class="warnings"></div>
+          <div id="selInfo" class="selinfo hidden"></div>
           <div class="row small">
             <label>要チェックのしきい値(信頼度%):
               <input type="number" id="threshold" min="0" max="100" step="1" style="width:64px" />
