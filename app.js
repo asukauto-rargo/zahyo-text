@@ -170,9 +170,13 @@ function renderResults() {
     const sec = el("div", { className: "block" });
     sec.append(el("div", { className: "blocktitle", textContent: `${bl.title || "(見出しなし)"}　(${bl.rows.length}点)` }));
     bl.rows.forEach((r, i) => {
-      const unit = el("div", { className: "unit" });
+      const unit = el("div", { className: "unit" + (r.checked ? " checked" : "") });
       r._unit = unit;
       const head = el("div", { className: "unit-head" });
+      const chk = el("input", { type: "checkbox", className: "chk", title: "目視チェック済み" });
+      chk.checked = !!r.checked;
+      chk.addEventListener("change", () => { r.checked = chk.checked; unit.classList.toggle("checked", r.checked); updateCheckCount(); });
+      head.append(chk);
       if (hasNames) head.append(el("span", { className: "pname", textContent: r.name || "(名称なし)" }));
       head.append(el("span", { className: "conf", textContent: isFinite(Number(r.confidence)) ? r.confidence + "%" : "-" }));
       const dupBadge = el("span", { className: "dupbadge hidden", textContent: "重複・出力除外" });
@@ -226,7 +230,15 @@ function updateHighlights() {
   b.textContent = `全体信頼度: ${overall ?? "-"}% ／ 抽出点数: ${total} ／ ブロック: ${blocks.length}`;
   $("#lowCount").textContent = low ? `要チェック: ${low} 点` : "要チェックなし";
   $("#dupCount").textContent = dup ? `重複(除外): ${dup} 点` : "";
+  updateCheckCount();
   updatePreview();
+}
+
+function updateCheckCount() {
+  let total = 0, done = 0;
+  blocks.forEach((bl) => bl.rows.forEach((r) => { total++; if (r.checked) done++; }));
+  const e = $("#checkCount");
+  if (e) e.textContent = `チェック済み: ${done} / ${total}`;
 }
 
 // ====== txt(重複除外) ======
