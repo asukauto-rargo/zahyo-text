@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>座標テキスト化ツール</h1>
-    <p class="sub">写真 / PDF から X・Y 座標を読み取り、元画像の切り抜きと見比べて確認し、テキストをダウンロードします。</p>
+    <p class="sub">写真 / PDF から X・Y 座標を読み取り、左の元画像と見比べて確認し、テキストをダウンロードします。</p>
   </header>
 
   <div id="configWarning" class="banner warn hidden">
@@ -17,7 +17,6 @@
   </div>
 
   <section class="tabpanel">
-    <!-- このツールがしていること -->
     <details class="card info" open>
       <summary><strong>このツールがしていること / 特記事項の使い方</strong></summary>
       <ul class="infolist">
@@ -25,7 +24,7 @@
         <li>手書きの<b>赤字・下線・丸印は無視</b>し、印字された数値のみ読み取ります。</li>
         <li>複数の表がある場合、<b>「左優先→上優先」</b>の順に、表ごとにまとめて表示します。</li>
         <li>同じ座標が複数回出た場合、<b>2回目以降はグレー表示</b>し、ダウンロードするテキストからは除外します。</li>
-        <li>判読が難しい桁は<b>信頼度を下げて色付き</b>表示。元画像の切り抜きと見比べて直せます。</li>
+        <li>判読が難しい桁は<b>信頼度を下げて色付き</b>表示。左の元画像と見比べて直せます。</li>
         <li>出力は各行「<b>X␣Y</b>」(半角スペース区切り、写真通り 左X・右Y)。</li>
       </ul>
       <p class="hint">上記で足りない条件は、下の「特記事項」に書くと読み取りに反映されます(例:「左端の表だけ」「点名は無視」「符号は必ずマイナス」など)。空欄でも実行できます。</p>
@@ -48,7 +47,7 @@
           <span id="rotLabel" class="status">0°</span>
         </div>
         <div class="imgwrap"><canvas id="imgCanvas"></canvas></div>
-        <p id="pdfNote" class="hint hidden">PDF はプレビュー・回転・切り抜きに未対応です(そのまま抽出します)。</p>
+        <p id="pdfNote" class="hint hidden">PDF はプレビュー・回転に未対応です(そのまま抽出します)。</p>
         <p class="hint">※ 表の文字が横書きで読める向きにしてから抽出すると精度が上がります。</p>
       </div>
 
@@ -62,31 +61,45 @@
       </div>
     </div>
 
-    <!-- 結果 -->
-    <div id="results" class="hidden">
-      <div class="card">
-        <h2>2. 抽出結果を確認・修正</h2>
-        <div id="overallBanner" class="banner"></div>
-        <div id="warnings" class="warnings"></div>
-        <div class="row small">
-          <label>要チェックのしきい値(信頼度%):
-            <input type="number" id="threshold" min="0" max="100" step="1" style="width:64px" />
-          </label>
-          <span id="lowCount" class="status"></span>
-          <span id="dupCount" class="status"></span>
+    <!-- 結果: 左=元画像 / 右=読み取り値 -->
+    <div id="results" class="compare hidden">
+      <div class="imgpane">
+        <div class="imgpane-head">
+          <strong>元画像(見比べ用)</strong>
+          <span class="spacer"></span>
+          <label class="zoomlabel">拡大 <input type="range" id="zoom" min="60" max="300" value="100"></label>
         </div>
-        <p class="hint">各点は「上=元画像の切り抜き / 下=読み取り値」です。値を直接直せます。グレーは重複(出力から除外)。</p>
-        <div id="blocks"></div>
+        <div id="resultImgWrap" class="result-img-wrap">
+          <img id="resultImg" alt="元画像" />
+          <p id="resultPdfNote" class="hint hidden">PDF は画像プレビュー非対応です。元のPDFを別途開いて見比べてください。</p>
+        </div>
       </div>
 
-      <div class="card">
-        <h2>3. テキストをダウンロード</h2>
-        <div class="row small">
-          <label>ファイル名: <input type="text" id="filename" value="coords.txt" style="width:180px" /></label>
-          <button id="downloadBtn" class="primary">txt をダウンロード</button>
+      <div class="datapane">
+        <div class="card">
+          <h2>2. 抽出結果を確認・修正</h2>
+          <div id="overallBanner" class="banner"></div>
+          <div id="warnings" class="warnings"></div>
+          <div class="row small">
+            <label>要チェックのしきい値(信頼度%):
+              <input type="number" id="threshold" min="0" max="100" step="1" style="width:64px" />
+            </label>
+            <span id="lowCount" class="status"></span>
+            <span id="dupCount" class="status"></span>
+          </div>
+          <p class="hint">左の元画像と見比べて値を直せます。グレーは重複(出力から除外)。</p>
+          <div id="blocks"></div>
         </div>
-        <p class="hint">形式: 各行「X Y」半角スペース区切り(重複除外後)</p>
-        <textarea id="txtPreview" rows="8" readonly></textarea>
+
+        <div class="card">
+          <h2>3. テキストをダウンロード</h2>
+          <div class="row small">
+            <label>ファイル名: <input type="text" id="filename" value="coords.txt" style="width:180px" /></label>
+            <button id="downloadBtn" class="primary">txt をダウンロード</button>
+          </div>
+          <p class="hint">形式: 各行「X Y」半角スペース区切り(重複除外後)</p>
+          <textarea id="txtPreview" rows="8" readonly></textarea>
+        </div>
       </div>
     </div>
   </section>

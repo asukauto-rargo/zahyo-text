@@ -136,29 +136,32 @@ button.mini { padding: 4px 10px; }
 .unit-head .dupbadge { font-size: 11px; background: #d0d0d0; color: #333; border-radius: 10px; padding: 1px 8px; }
 .unit-head .flex1 { flex: 1; }
 
-/* 位置合わせ枠 */
-.cal { margin-bottom: 10px; }
-.cal > summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-.calstage { position: relative; display: inline-block; max-width: 100%; line-height: 0; user-select: none; }
-.calimg { display: block; max-width: 640px; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; }
-.caloverlay { position: absolute; inset: 0; }
-.calrect { position: absolute; border: 2px solid #2563eb; background: rgba(37,99,235,.08); box-sizing: border-box; cursor: move; touch-action: none; }
-.calrect .h { position: absolute; background: #2563eb; touch-action: none; }
-.calrect .hL { left: -4px; top: 0; width: 8px; height: 100%; cursor: ew-resize; opacity: .35; }
-.calrect .hR { right: -4px; top: 0; width: 8px; height: 100%; cursor: ew-resize; opacity: .35; }
-.calrect .hT { top: -4px; left: 0; height: 8px; width: 100%; cursor: ns-resize; opacity: .35; }
-.calrect .hB { bottom: -4px; left: 0; height: 8px; width: 100%; cursor: ns-resize; opacity: .35; }
-.calsplit { position: absolute; top: 0; height: 100%; width: 3px; margin-left: -1.5px; background: #dc2626; cursor: ew-resize; touch-action: none; }
+/* 左=元画像 / 右=値 の横並び */
+.compare { display: flex; gap: 16px; align-items: flex-start; }
+.imgpane {
+  flex: 1 1 46%; min-width: 0;
+  position: sticky; top: 8px;
+  max-height: calc(100vh - 24px); overflow: auto;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px;
+}
+.datapane { flex: 1 1 54%; min-width: 0; }
+.datapane .card { margin-bottom: 16px; }
+.zoomlabel { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.result-img-wrap { overflow: auto; }
+#resultImg { width: 100%; height: auto; display: block; border: 1px solid var(--border); border-radius: 6px; }
 
-/* 比較ユニット: X/Y を列で縦揃え(上=切り抜き, 下=読み取り値) */
-.cmpgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.cmpcol { display: flex; flex-direction: column; gap: 4px; }
-.crop { display: block; width: 100%; height: 34px; object-fit: cover; object-position: left center;
-  border: 1px solid var(--border); border-radius: 4px; background: #fafafa; image-rendering: -webkit-optimize-contrast; }
+.vals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .val { display: flex; align-items: center; gap: 6px; }
 .val .vlabel { font-size: 12px; color: var(--muted); width: 14px; }
 .val input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px; font-family: ui-monospace, monospace; font-size: 14px; }
 .val input:focus { border-color: var(--primary); outline: none; }
+
+@media (max-width: 900px) {
+  .compare { flex-direction: column; }
+  .imgpane { position: static; max-height: none; width: 100%; flex-basis: auto; }
+  .datapane { flex-basis: auto; width: 100%; }
+}
 
 .hidden { display: none !important; }
 code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
