@@ -136,11 +136,25 @@ button.mini { padding: 4px 10px; }
 .unit-head .dupbadge { font-size: 11px; background: #d0d0d0; color: #333; border-radius: 10px; padding: 1px 8px; }
 .unit-head .flex1 { flex: 1; }
 
-.crop { display: block; width: 100%; max-height: 60px; object-fit: contain; object-position: left center;
-  border: 1px solid var(--border); border-radius: 4px; background: #fafafa; margin-bottom: 6px; image-rendering: -webkit-optimize-contrast; }
-.nocrop { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+/* 位置合わせ枠 */
+.cal { margin-bottom: 10px; }
+.cal > summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.calstage { position: relative; display: inline-block; max-width: 100%; line-height: 0; user-select: none; }
+.calimg { display: block; max-width: 640px; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; }
+.caloverlay { position: absolute; inset: 0; }
+.calrect { position: absolute; border: 2px solid #2563eb; background: rgba(37,99,235,.08); box-sizing: border-box; cursor: move; touch-action: none; }
+.calrect .h { position: absolute; background: #2563eb; touch-action: none; }
+.calrect .hL { left: -4px; top: 0; width: 8px; height: 100%; cursor: ew-resize; opacity: .35; }
+.calrect .hR { right: -4px; top: 0; width: 8px; height: 100%; cursor: ew-resize; opacity: .35; }
+.calrect .hT { top: -4px; left: 0; height: 8px; width: 100%; cursor: ns-resize; opacity: .35; }
+.calrect .hB { bottom: -4px; left: 0; height: 8px; width: 100%; cursor: ns-resize; opacity: .35; }
+.calsplit { position: absolute; top: 0; height: 100%; width: 3px; margin-left: -1.5px; background: #dc2626; cursor: ew-resize; touch-action: none; }
 
-.vals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* 比較ユニット: X/Y を列で縦揃え(上=切り抜き, 下=読み取り値) */
+.cmpgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cmpcol { display: flex; flex-direction: column; gap: 4px; }
+.crop { display: block; width: 100%; height: 34px; object-fit: cover; object-position: left center;
+  border: 1px solid var(--border); border-radius: 4px; background: #fafafa; image-rendering: -webkit-optimize-contrast; }
 .val { display: flex; align-items: center; gap: 6px; }
 .val .vlabel { font-size: 12px; color: var(--muted); width: 14px; }
 .val input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px; font-family: ui-monospace, monospace; font-size: 14px; }
