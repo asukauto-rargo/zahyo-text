@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>座標テキスト化ツール</h1>
-    <p class="sub">写真 / PDF から X・Y 座標を読み取り、元画像と見比べて確認し、テキストをダウンロードします。</p>
+    <p class="sub">写真 / PDF から X・Y 座標を読み取り、元画像の切り抜きと見比べて確認し、テキストをダウンロードします。</p>
   </header>
 
   <div id="configWarning" class="banner warn hidden">
@@ -17,6 +17,20 @@
   </div>
 
   <section class="tabpanel">
+    <!-- このツールがしていること -->
+    <details class="card info" open>
+      <summary><strong>このツールがしていること / 特記事項の使い方</strong></summary>
+      <ul class="infolist">
+        <li>各表(ブロック)の <b>X座標(左)・Y座標(右)</b> を抽出します。点名(54G17 等)があれば一緒に表示します。</li>
+        <li>手書きの<b>赤字・下線・丸印は無視</b>し、印字された数値のみ読み取ります。</li>
+        <li>複数の表がある場合、<b>「左優先→上優先」</b>の順に、表ごとにまとめて表示します。</li>
+        <li>同じ座標が複数回出た場合、<b>2回目以降はグレー表示</b>し、ダウンロードするテキストからは除外します。</li>
+        <li>判読が難しい桁は<b>信頼度を下げて色付き</b>表示。元画像の切り抜きと見比べて直せます。</li>
+        <li>出力は各行「<b>X␣Y</b>」(半角スペース区切り、写真通り 左X・右Y)。</li>
+      </ul>
+      <p class="hint">上記で足りない条件は、下の「特記事項」に書くと読み取りに反映されます(例:「左端の表だけ」「点名は無視」「符号は必ずマイナス」など)。空欄でも実行できます。</p>
+    </details>
+
     <div class="card">
       <h2>1. ファイルを選択</h2>
       <div id="dropzone" class="dropzone">
@@ -25,13 +39,22 @@
         <div id="fileInfo" class="fileinfo"></div>
       </div>
 
-      <div id="rotateBar" class="row small hidden">
-        <span>向きの調整:</span>
-        <button id="rotLeft" class="ghost">⟲ 左90°</button>
-        <button id="rotRight" class="ghost">⟳ 右90°</button>
-        <span id="rotLabel" class="status">0°</span>
-        <span class="hint">※ 表の文字が横書きで読める向きにしてから抽出すると精度が上がります</span>
+      <div id="previewArea" class="previewarea hidden">
+        <div class="imgpane-head">
+          <strong>プレビュー</strong>
+          <span class="spacer"></span>
+          <button id="rotLeft" class="ghost mini">⟲ 左90°</button>
+          <button id="rotRight" class="ghost mini">⟳ 右90°</button>
+          <span id="rotLabel" class="status">0°</span>
+        </div>
+        <div class="imgwrap"><canvas id="imgCanvas"></canvas></div>
+        <p id="pdfNote" class="hint hidden">PDF はプレビュー・回転・切り抜きに未対応です(そのまま抽出します)。</p>
+        <p class="hint">※ 表の文字が横書きで読める向きにしてから抽出すると精度が上がります。</p>
       </div>
+
+      <label class="notelabel">特記事項(任意)
+        <textarea id="notes" rows="2" placeholder="例: 左端の表だけ抽出 / 点名は不要 / X座標は必ずマイナス など"></textarea>
+      </label>
 
       <div class="row">
         <button id="extractBtn" class="primary" disabled>この向きで座標を抽出する</button>
@@ -39,53 +62,31 @@
       </div>
     </div>
 
-    <!-- 見比べエリア(画像=左 / 結果=右) -->
-    <div id="compare" class="compare hidden">
-      <div class="imgpane">
-        <div class="imgpane-head">
-          <strong>元画像(見比べ用)</strong>
-          <span class="spacer"></span>
-          <button id="rotLeft2" class="ghost mini">⟲</button>
-          <button id="rotRight2" class="ghost mini">⟳</button>
-          <label class="zoomlabel">拡大 <input type="range" id="zoom" min="40" max="220" value="100"></label>
+    <!-- 結果 -->
+    <div id="results" class="hidden">
+      <div class="card">
+        <h2>2. 抽出結果を確認・修正</h2>
+        <div id="overallBanner" class="banner"></div>
+        <div id="warnings" class="warnings"></div>
+        <div class="row small">
+          <label>要チェックのしきい値(信頼度%):
+            <input type="number" id="threshold" min="0" max="100" step="1" style="width:64px" />
+          </label>
+          <span id="lowCount" class="status"></span>
+          <span id="dupCount" class="status"></span>
         </div>
-        <div id="imgWrap" class="imgwrap">
-          <canvas id="imgCanvas"></canvas>
-          <p id="pdfNote" class="hint hidden">PDF はプレビュー・回転に未対応です(そのまま抽出します)。</p>
-        </div>
+        <p class="hint">各点は「上=元画像の切り抜き / 下=読み取り値」です。値を直接直せます。グレーは重複(出力から除外)。</p>
+        <div id="blocks"></div>
       </div>
 
-      <div class="datapane">
-        <div class="card">
-          <h2>2. 抽出結果を確認・修正</h2>
-          <div id="overallBanner" class="banner"></div>
-          <div id="warnings" class="warnings"></div>
-          <div class="row small">
-            <label>要チェックのしきい値(信頼度%):
-              <input type="number" id="threshold" min="0" max="100" step="1" style="width:64px" />
-            </label>
-            <span id="lowCount" class="status"></span>
-            <button id="addRowBtn" class="ghost">＋行を追加</button>
-          </div>
-          <div class="tablewrap">
-            <table id="coordTable">
-              <thead>
-                <tr><th>#</th><th>X 座標</th><th>Y 座標</th><th>信頼度</th><th>備考</th><th></th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+      <div class="card">
+        <h2>3. テキストをダウンロード</h2>
+        <div class="row small">
+          <label>ファイル名: <input type="text" id="filename" value="coords.txt" style="width:180px" /></label>
+          <button id="downloadBtn" class="primary">txt をダウンロード</button>
         </div>
-
-        <div class="card">
-          <h2>3. テキストをダウンロード</h2>
-          <div class="row small">
-            <label>ファイル名: <input type="text" id="filename" value="coords.txt" style="width:180px" /></label>
-            <button id="downloadBtn" class="primary">txt をダウンロード</button>
-          </div>
-          <p class="hint">形式: 各行「X Y」半角スペース区切り(写真通り 左X・右Y)</p>
-          <textarea id="txtPreview" rows="8" readonly></textarea>
-        </div>
+        <p class="hint">形式: 各行「X Y」半角スペース区切り(重複除外後)</p>
+        <textarea id="txtPreview" rows="8" readonly></textarea>
       </div>
     </div>
   </section>

@@ -105,29 +105,46 @@ textarea {
   border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 14px; color: var(--text);
 }
 
-/* 見比べレイアウト */
-.compare { display: flex; gap: 16px; align-items: flex-start; }
-.imgpane {
-  flex: 1 1 44%; min-width: 0;
-  position: sticky; top: 8px;
-  max-height: calc(100vh - 24px); overflow: auto;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px;
-}
-.datapane { flex: 1 1 56%; min-width: 0; }
-.datapane .card { margin-bottom: 16px; }
+/* 情報パネル */
+.card.info { background: #f4f8ff; border-color: #c9dbf5; }
+.card.info summary { cursor: pointer; font-size: 15px; }
+.infolist { margin: 10px 0 4px; padding-left: 20px; }
+.infolist li { margin: 3px 0; font-size: 14px; }
+
+/* プレビュー */
+.previewarea { margin-top: 12px; }
 .imgpane-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 14px; }
 .imgpane-head .spacer { flex: 1; }
-.zoomlabel { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
 .imgwrap { text-align: center; }
-.imgwrap canvas { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; }
+.imgwrap canvas { max-width: 100%; max-height: 340px; height: auto; border: 1px solid var(--border); border-radius: 6px; }
 button.mini { padding: 4px 10px; }
+.notelabel { display: block; margin-top: 12px; font-size: 13px; color: var(--muted); }
+.notelabel textarea { width: 100%; margin-top: 4px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 14px; color: var(--text); }
 
-@media (max-width: 900px) {
-  .compare { flex-direction: column; }
-  .imgpane { position: static; max-height: none; width: 100%; flex-basis: auto; }
-  .datapane { flex-basis: auto; width: 100%; }
-}
+/* ブロック & 比較ユニット */
+.block { margin-bottom: 18px; }
+.blocktitle { font-weight: 700; font-size: 14px; background: #eef1f7; border-left: 4px solid var(--primary); padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; }
+.units-note { color: var(--muted); font-size: 13px; }
+
+.unit { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
+.unit.low { background: var(--low); }
+.unit.mid { background: var(--mid); }
+.unit.dup { opacity: .55; background: #f0f0f0; }
+.unit-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.unit-head .pname { font-weight: 700; font-size: 14px; }
+.unit-head .conf { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.unit-head .dupbadge { font-size: 11px; background: #d0d0d0; color: #333; border-radius: 10px; padding: 1px 8px; }
+.unit-head .flex1 { flex: 1; }
+
+.crop { display: block; width: 100%; max-height: 60px; object-fit: contain; object-position: left center;
+  border: 1px solid var(--border); border-radius: 4px; background: #fafafa; margin-bottom: 6px; image-rendering: -webkit-optimize-contrast; }
+.nocrop { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+
+.vals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.val { display: flex; align-items: center; gap: 6px; }
+.val .vlabel { font-size: 12px; color: var(--muted); width: 14px; }
+.val input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 6px; font-family: ui-monospace, monospace; font-size: 14px; }
+.val input:focus { border-color: var(--primary); outline: none; }
 
 .hidden { display: none !important; }
 code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
