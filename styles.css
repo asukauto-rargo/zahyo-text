@@ -181,13 +181,20 @@ button.mini { padding: 4px 10px; }
   background: linear-gradient(#fbf6ee, #f3ead9); border: 1px solid var(--border);
   border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.10);
 }
+#catWidget.hidden { display: none !important; }
+#catToggle {
+  position: fixed; top: 12px; right: 12px; z-index: 9999;
+  font-size: 12px; padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+#catWidget:not(.hidden) ~ #catToggle { top: 122px; }
 .stage { position: relative; width: 100%; height: 100%; }
 .floor { position: absolute; left: 0; right: 0; bottom: 16px; height: 2px; background: #d9c8ad; }
 .furni { position: absolute; bottom: 14px; }
 .furni.wheel { left: 8px; }
-.furni.bed { left: 132px; }
+.furni.bed { left: 128px; }
 .furni.bowl { left: 250px; bottom: 12px; }
-.furni svg { display: block; }
+.furni svg { display: block; image-rendering: pixelated; }
 .wheelinner { transform-box: fill-box; transform-origin: 50% 50%; }
 .wheel.spin .wheelinner { animation: wheelSpin .7s linear infinite; }
 @keyframes wheelSpin { to { transform: rotate(360deg); } }
@@ -196,9 +203,9 @@ button.mini { padding: 4px 10px; }
 @keyframes zzz { 0% { opacity: 0; transform: translateY(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
 
 /* 猫本体 */
-.cat { position: absolute; bottom: 12px; left: 20px; width: 64px; cursor: pointer; transition: left 1s linear; }
+.cat { position: absolute; bottom: 14px; left: 20px; width: 60px; cursor: pointer; transition: left 1s linear, bottom .35s ease; }
 .cat.flip { transform: scaleX(-1); }
-.catsvg { display: block; width: 100%; height: auto; transform-box: fill-box; transform-origin: 50% 62%; }
+.catsvg { display: block; width: 100%; height: auto; image-rendering: pixelated; transform-box: fill-box; transform-origin: 50% 62%; }
 .tail { transform-box: fill-box; transform-origin: 90% 86%; animation: tailSway 2.6s ease-in-out infinite; }
 @keyframes tailSway { 0%,100% { transform: rotate(-7deg); } 50% { transform: rotate(9deg); } }
 .leg { transform-box: fill-box; transform-origin: 50% 6%; }
