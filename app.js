@@ -14,6 +14,7 @@ let selectedFile = null;
 let isPdf = false;
 let loadedImg = null;
 let rotation = 0;
+let deletedStack = [];     // 削除の取り消し用
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!CONFIG || !CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes("YOUR-PROJECT")) {
@@ -106,6 +107,7 @@ function bindButtons() {
   $("#threshold").addEventListener("input", (e) => { threshold = Number(e.target.value) || 0; updateHighlights(); });
   $("#zoom").addEventListener("input", (e) => { const im = $("#resultImg"); if (im) im.style.width = e.target.value + "%"; });
   $("#downloadBtn").addEventListener("click", downloadTxt);
+  $("#undoBtn").addEventListener("click", undoDelete);
 }
 
 function fileToBase64(file) {
@@ -145,6 +147,7 @@ async function runExtract() {
     blocks.sort((a, b) => (a.bbox && b.bbox) ? ((a.bbox[0] - b.bbox[0]) || (a.bbox[1] - b.bbox[1])) : 0);
     hasNames = !!data.has_names;
     overall = data.overall_confidence ?? null;
+    deletedStack = []; updateUndoBtn();
     const total = blocks.reduce((s, b) => s + b.rows.length, 0);
     $("#extractStatus").textContent = `抽出完了: ${total} 点 / ${blocks.length} ブロック (モデル: ${data.model || "-"})`;
     $("#results").classList.remove("hidden");
@@ -183,7 +186,7 @@ function renderResults() {
       head.append(dupBadge); r._dupBadge = dupBadge;
       head.append(el("span", { className: "flex1" }));
       const del = el("button", { className: "delbtn", textContent: "削除" });
-      del.addEventListener("click", () => { bl.rows.splice(i, 1); renderResults(); });
+      del.addEventListener("click", () => { deletedStack.push({ block: bl, index: i, row: r }); bl.rows.splice(i, 1); updateUndoBtn(); renderResults(); });
       head.append(del);
       unit.append(head);
 
@@ -193,9 +196,27 @@ function renderResults() {
       unit.append(vals);
       sec.append(unit);
     });
+    // この表に手動で行を追加
+    const addBtn = el("button", { className: "ghost addrow", textContent: "＋この表に行を追加" });
+    addBtn.addEventListener("click", () => { bl.rows.push({ name: "", x: "", y: "", confidence: 100, checked: false }); renderResults(); });
+    sec.append(addBtn);
     cont.append(sec);
   });
   updateHighlights();
+}
+
+function updateUndoBtn() {
+  const b = $("#undoBtn");
+  if (b) b.disabled = deletedStack.length === 0;
+}
+function undoDelete() {
+  const last = deletedStack.pop();
+  if (!last) return;
+  const bl = last.block;
+  if (blocks.includes(bl)) bl.rows.splice(Math.min(last.index, bl.rows.length), 0, last.row);
+  else { blocks.push(bl); bl.rows.splice(Math.min(last.index, bl.rows.length), 0, last.row); }
+  updateUndoBtn();
+  renderResults();
 }
 
 function makeVal(labelText, row, key) {

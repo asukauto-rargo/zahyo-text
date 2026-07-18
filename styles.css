@@ -171,40 +171,55 @@ button.mini { padding: 4px 10px; }
 
 .hidden { display: none !important; }
 
-/* 猫ちゃん(遊びまわる。クリック以外は透過してチェックの邪魔をしない) */
-#catRoam { position: fixed; inset: 0; pointer-events: none; z-index: 9998; overflow: hidden; }
-#catBtn {
-  position: absolute; left: 0; top: 0; width: 64px; height: 64px;
-  padding: 0; border: none; background: transparent; cursor: pointer;
-  pointer-events: auto; opacity: .93; will-change: transform;
-  transition: transform 2s cubic-bezier(.35,.1,.25,1);
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,.2));
+/* 行の手動追加ボタン */
+.addrow { margin: 2px 0 4px; font-size: 13px; }
+
+/* 猫ちゃん(右上に固定・ドット絵。回し車/餌/睡眠をランダム、クリックでへそてん) */
+#catWidget {
+  position: fixed; top: 12px; right: 12px; width: 96px; height: 92px;
+  z-index: 9998; user-select: none;
+  background: rgba(255,255,255,.72); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
-#catBtn svg { width: 100%; height: 100%; display: block; }
-#catBtn:hover { opacity: 1; }
-#catBtn.walking svg { animation: catBob .5s ease-in-out infinite; }
-@keyframes catBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
-/* へそてん: お腹を見せてゴロン＋ごきげんウィグル */
-#catBtn.hesoten { transition: transform .3s ease; }
-#catBtn.hesoten svg { animation: hesoten 1.7s ease-in-out; transform-origin: 50% 60%; }
-@keyframes hesoten {
-  0% { transform: rotate(0) }
-  15% { transform: rotate(-160deg) }
-  30% { transform: rotate(-200deg) }
-  45% { transform: rotate(-165deg) }
-  60% { transform: rotate(-195deg) }
-  75% { transform: rotate(-175deg) }
-  100% { transform: rotate(-180deg) }
+.cat-stage { position: relative; width: 100%; height: 100%; }
+.cat-floor { position: absolute; left: 10px; right: 10px; bottom: 12px; height: 3px; background: #e2d7c6; border-radius: 2px; }
+.cat-sprite { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); cursor: pointer; }
+.cat-sprite svg { display: block; image-rendering: pixelated; }
+.cat-inner { transform-origin: 50% 70%; }
+
+/* 回し車 */
+.cat-wheel { position: absolute; left: 50%; top: 48%; width: 74px; height: 74px; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; }
+.state-run .cat-wheel { opacity: .85; animation: catspin 0.9s linear infinite; }
+.state-run .cat-inner { animation: catRun .16s steps(2) infinite; }
+@keyframes catspin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes catRun { 0% { transform: translateY(0); } 100% { transform: translateY(-2px); } }
+
+/* 餌を食べる */
+.cat-bowl { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); opacity: 0; }
+.cat-bowl svg { display: block; image-rendering: pixelated; }
+.state-eat .cat-bowl { opacity: 1; }
+.state-eat .cat-inner { animation: catEat .55s ease-in-out infinite; }
+@keyframes catEat { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(4px) rotate(4deg); } }
+
+/* 寝る */
+.cat-zzz { position: absolute; left: 62%; top: 8px; font-size: 13px; color: #9a8b78; opacity: 0; font-weight: 700; }
+.state-sleep .cat-zzz { opacity: 1; animation: catZzz 2.2s ease-in-out infinite; }
+.state-sleep .cat-inner { animation: catBreath 2.6s ease-in-out infinite; }
+@keyframes catBreath { 0%,100% { transform: rotate(8deg) scaleY(1); } 50% { transform: rotate(8deg) scaleY(.94); } }
+@keyframes catZzz { 0% { transform: translateY(0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+
+/* へそてん(クリック時: 背中をつけてゴロゴロ) */
+.hesoten .cat-inner { animation: catRoll 1.8s ease-in-out; }
+@keyframes catRoll {
+  0% { transform: rotate(0); }
+  15% { transform: rotate(175deg); }
+  35% { transform: rotate(192deg); }
+  55% { transform: rotate(168deg); }
+  75% { transform: rotate(188deg); }
+  100% { transform: rotate(180deg); }
 }
-.catheart {
-  position: absolute; color: #ff5d8f; font-size: 18px; pointer-events: none;
-  animation: catHeart 1.3s ease-out forwards; opacity: 0;
-}
-@keyframes catHeart {
-  0% { transform: translateY(0) scale(.5); opacity: 0 }
-  20% { opacity: 1 }
-  100% { transform: translateY(-46px) scale(1.1); opacity: 0 }
-}
+.catheart { position: absolute; color: #ff5d8f; font-size: 15px; pointer-events: none; animation: catHeart 1.3s ease-out forwards; opacity: 0; }
+@keyframes catHeart { 0% { transform: translateY(0) scale(.5); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-40px) scale(1.1); opacity: 0; } }
 code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
 footer { padding: 16px 24px 32px; color: var(--muted); font-size: 12px; }
 

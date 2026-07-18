@@ -1,107 +1,121 @@
 "use strict";
-// 画面を遊びまわる猫ちゃん。クリックでへそてん(お腹を見せて喜ぶ)。
-// チェック作業の邪魔をしないよう小さめ・半透明・クリック以外は透過。
+// 右上固定のドット絵猫ちゃん。回し車で走る/餌を食べる/寝る をランダムに繰り返し、
+// クリックで背中をつけてへそてん(ゴロゴロ)して喜ぶ。
 (function () {
-  // スノーシュー風(クリーム地＋シール色の耳/顔、青い目)の猫SVG
-  const CAT_SVG = `
-  <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="36" cy="66" rx="18" ry="4" fill="rgba(0,0,0,.12)"/>
-    <!-- しっぽ -->
-    <path d="M54 52 q16 2 12 -14 q-2 -8 -8 -6 q5 3 3 10 q-2 7 -9 6z" fill="#8a6650"/>
-    <!-- からだ -->
-    <ellipse cx="34" cy="50" rx="20" ry="16" fill="#f4e7d5"/>
-    <!-- 前足 -->
-    <ellipse cx="26" cy="63" rx="5" ry="4" fill="#f7edde"/>
-    <ellipse cx="40" cy="63" rx="5" ry="4" fill="#f7edde"/>
-    <!-- 頭 -->
-    <circle cx="34" cy="30" r="19" fill="#f4e7d5"/>
-    <!-- 耳 -->
-    <path d="M18 18 L20 4 L33 15 Z" fill="#8a6650"/>
-    <path d="M50 18 L48 4 L35 15 Z" fill="#8a6650"/>
-    <path d="M21 15 L22 8 L29 14 Z" fill="#d99b8f"/>
-    <path d="M47 15 L46 8 L39 14 Z" fill="#d99b8f"/>
-    <!-- 顔のマスク(シール色) -->
-    <path d="M34 14 q13 2 12 16 q-1 10 -12 12 q-11 -2 -12 -12 q-1 -14 12 -16z" fill="#7a5a44" opacity="0.92"/>
-    <!-- 白いマズル -->
-    <ellipse cx="34" cy="37" rx="9" ry="7" fill="#f7efe2"/>
-    <!-- 目 -->
-    <ellipse class="eye" cx="27" cy="30" rx="4.2" ry="4.6" fill="#6db6e0"/>
-    <ellipse class="eye" cx="41" cy="30" rx="4.2" ry="4.6" fill="#6db6e0"/>
-    <circle cx="27" cy="30" r="2" fill="#1e2a33"/>
-    <circle cx="41" cy="30" r="2" fill="#1e2a33"/>
-    <circle cx="26" cy="29" r="0.8" fill="#fff"/>
-    <circle cx="40" cy="29" r="0.8" fill="#fff"/>
-    <!-- 鼻・口 -->
-    <path d="M31.5 36 L36.5 36 L34 39 Z" fill="#e79aa6"/>
-    <path d="M34 39 q-3 3 -6 1 M34 39 q3 3 6 1" stroke="#7a5a44" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-    <!-- ヒゲ -->
-    <g stroke="#cbb9a3" stroke-width="1" stroke-linecap="round">
-      <path d="M22 35 L10 33 M22 38 L11 39"/>
-      <path d="M46 35 L58 33 M46 38 L57 39"/>
-    </g>
-  </svg>`;
+  const PAL = { K: "#33261d", C: "#f4e7d5", S: "#e3cfb4", B: "#7c5a43", P: "#e89aa6", e: "#33261d" };
+  // 目あき
+  const CAT_OPEN = [
+    "..............",
+    "..KK......KK..",
+    ".KBBK....KBBK.",
+    ".KBBKKKKKKBBK.",
+    "KCCCCCCCCCCCCK",
+    "KCCCCCCCCCCCCK",
+    "KCCeeCCCCeeCCK",
+    "KCCeeCCCCeeCCK",
+    "KCCCCCPPCCCCCK",
+    "KCCCCCPPCCCCCK",
+    ".KCCCCCCCCCCK.",
+    ".KKCCCCCCCCKK.",
+    "..KKKKKKKKKK..",
+    "..............",
+  ];
+  // 目とじ(睡眠)
+  const CAT_SLEEP = [
+    "..............",
+    "..KK......KK..",
+    ".KBBK....KBBK.",
+    ".KBBKKKKKKBBK.",
+    "KCCCCCCCCCCCCK",
+    "KCCCCCCCCCCCCK",
+    "KCCCCCCCCCCCCK",
+    "KCCKKCCCCKKCCK",
+    "KCCCCCPPCCCCCK",
+    "KCCCCCPPCCCCCK",
+    ".KCCCCCCCCCCK.",
+    ".KKCCCCCCCCKK.",
+    "..KKKKKKKKKK..",
+    "..............",
+  ];
+  const BOWL = { o: "#cf7a33", f: "#7a4a24" };
+  const BOWL_ART = [
+    "....ffff....",
+    "..oooooooo..",
+    ".oooooooooo.",
+    "..oooooooo..",
+  ];
 
-  const wrap = document.createElement("div");
-  wrap.id = "catRoam";
-  const cat = document.createElement("button");
-  cat.id = "catBtn";
-  cat.setAttribute("aria-label", "猫ちゃん");
-  cat.innerHTML = CAT_SVG;
-  wrap.appendChild(cat);
-
-  function start() {
-    document.body.appendChild(wrap);
-    place(window.innerWidth * 0.5, window.innerHeight * 0.5, false);
-    scheduleMove();
+  function spriteSVG(grid, pal, px) {
+    const h = grid.length, w = grid[0].length;
+    let rects = "";
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const col = pal[grid[y][x]];
+      if (col) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${col}"/>`;
+    }
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w * px}" height="${h * px}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+  }
+  function wheelSVG() {
+    let spokes = "";
+    for (let a = 0; a < 360; a += 45) spokes += `<line x1="12" y1="12" x2="${12 + 10 * Math.cos(a * Math.PI / 180)}" y2="${12 + 10 * Math.sin(a * Math.PI / 180)}" stroke="#c2c6cd" stroke-width="1"/>`;
+    return `<svg viewBox="0 0 24 24" width="74" height="74" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="none" stroke="#b0b5bd" stroke-width="1.6"/>${spokes}</svg>`;
   }
 
-  let posX = 100, posY = 100, facing = 1, busy = false, timer = null;
+  const CAT_OPEN_SVG = spriteSVG(CAT_OPEN, PAL, 4);
+  const CAT_SLEEP_SVG = spriteSVG(CAT_SLEEP, PAL, 4);
+  const BOWL_SVG = spriteSVG(BOWL_ART, BOWL, 3);
 
-  function place(x, y, flip) {
-    const m = 20, w = 64, h = 64;
-    posX = Math.max(m, Math.min(window.innerWidth - w - m, x));
-    posY = Math.max(m, Math.min(window.innerHeight - h - m, y));
-    if (flip !== undefined) facing = flip ? -1 : 1;
-    cat.style.transform = `translate(${posX}px, ${posY}px) scaleX(${facing})`;
-  }
+  const widget = document.createElement("div");
+  widget.id = "catWidget";
+  widget.innerHTML =
+    `<div class="cat-stage">
+       <div class="cat-floor"></div>
+       <div class="cat-wheel">${wheelSVG()}</div>
+       <span class="cat-zzz">Zzz</span>
+       <div class="cat-bowl">${BOWL_SVG}</div>
+       <div class="cat-sprite" title="なでる"><div class="cat-inner">${CAT_OPEN_SVG}</div></div>
+     </div>`;
 
-  function scheduleMove() {
-    clearTimeout(timer);
-    timer = setTimeout(step, 2200 + Math.random() * 2200);
-  }
-  function step() {
-    if (busy) { scheduleMove(); return; }
-    const nx = 20 + Math.random() * (window.innerWidth - 104);
-    const ny = 20 + Math.random() * (window.innerHeight - 104);
-    facing = nx < posX ? -1 : 1;
-    cat.classList.add("walking");
-    place(nx, ny);
-    setTimeout(() => cat.classList.remove("walking"), 2000);
-    scheduleMove();
-  }
+  let stage, inner, timer = null, busy = false;
+  const STATES = ["run", "eat", "sleep"];
 
-  // クリック → へそてん(喜ぶ)
-  cat.addEventListener("click", (e) => {
-    e.preventDefault();
+  function setState(s) {
+    stage.className = "cat-stage state-" + s;
+    inner.innerHTML = (s === "sleep") ? CAT_SLEEP_SVG : CAT_OPEN_SVG;
+  }
+  function cycle() {
+    if (busy) return;
+    const s = STATES[Math.floor(Math.random() * STATES.length)];
+    setState(s);
+    const dur = s === "sleep" ? 4500 + Math.random() * 3000 : 3200 + Math.random() * 2600;
+    timer = setTimeout(cycle, dur);
+  }
+  function hesoten() {
     if (busy) return;
     busy = true;
-    cat.classList.add("hesoten");
-    for (let i = 0; i < 5; i++) spawnHeart();
-    setTimeout(() => { cat.classList.remove("hesoten"); busy = false; scheduleMove(); }, 1700);
-  });
-
-  function spawnHeart() {
-    const hz = document.createElement("span");
-    hz.className = "catheart";
-    hz.textContent = "♥";
-    hz.style.left = (posX + 20 + (Math.random() * 24 - 12)) + "px";
-    hz.style.top = (posY + 6) + "px";
-    hz.style.animationDelay = (Math.random() * 0.3) + "s";
-    wrap.appendChild(hz);
-    setTimeout(() => hz.remove(), 1400);
+    clearTimeout(timer);
+    stage.className = "cat-stage hesoten";
+    inner.innerHTML = CAT_OPEN_SVG;
+    for (let i = 0; i < 5; i++) spawnHeart(i);
+    setTimeout(() => { busy = false; cycle(); }, 1800);
+  }
+  function spawnHeart(i) {
+    const h = document.createElement("span");
+    h.className = "catheart";
+    h.textContent = "♥";
+    h.style.left = (26 + Math.random() * 40) + "px";
+    h.style.top = (40 + Math.random() * 8) + "px";
+    h.style.animationDelay = (i * 0.12) + "s";
+    stage.appendChild(h);
+    setTimeout(() => h.remove(), 1500);
   }
 
-  window.addEventListener("resize", () => place(posX, posY));
+  function start() {
+    document.body.appendChild(widget);
+    stage = widget.querySelector(".cat-stage");
+    inner = widget.querySelector(".cat-inner");
+    widget.querySelector(".cat-sprite").addEventListener("click", (e) => { e.preventDefault(); hesoten(); });
+    cycle();
+  }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 })();
